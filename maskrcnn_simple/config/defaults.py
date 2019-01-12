@@ -46,6 +46,7 @@ _C.INPUT.MIN_SIZE_TEST = 800
 # Maximum size of the side of the image during testing
 _C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
+# 对图像进行正则化的像素mean和std
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
 _C.INPUT.PIXEL_STD = [1., 1., 1.]
@@ -67,13 +68,14 @@ _C.DATASETS.TEST = ()
 # -----------------------------------------------------------------------------
 _C.DATALOADER = CN()
 # Number of data loading threads
-_C.DATALOADER.NUM_WORKERS = 4
+_C.DATALOADER.NUM_WORKERS = 4  # 数据集加载线程
 # If > 0, this enforces that each collated batch should have a size divisible
 # by SIZE_DIVISIBILITY
 _C.DATALOADER.SIZE_DIVISIBILITY = 0
 # If True, each batch should contain only images for which the aspect ratio
 # is compatible. This groups portrait images together, and landscape images
 # are not batched with portrait images.
+# 每一个batch应该包含相同的aspect ratio图像
 _C.DATALOADER.ASPECT_RATIO_GROUPING = True
 
 # ---------------------------------------------------------------------------- #
@@ -120,18 +122,19 @@ _C.MODEL.RPN.FG_IOU_THRESHOLD = 0.7
 # ==> negative RPN example)
 _C.MODEL.RPN.BG_IOU_THRESHOLD = 0.3
 # Total number of RPN examples per image
+# 每一张图像总共RPN样本数量
 _C.MODEL.RPN.BATCH_SIZE_PER_IMAGE = 256
 # Target fraction of foreground (positive) examples per RPN minibatch
-_C.MODEL.RPN.POSITIVE_FRACTION = 0.5
+_C.MODEL.RPN.POSITIVE_FRACTION = 0.5  # RPN训练中前景和背景的比例
 # Number of top scoring RPN proposals to keep before applying NMS
 # When FPN is used, this is *per FPN level* (not total)
-_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 12000
-_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 6000
+_C.MODEL.RPN.PRE_NMS_TOP_N_TRAIN = 12000  # PRE NMS TOP_N to train
+_C.MODEL.RPN.PRE_NMS_TOP_N_TEST = 6000  # PER NMS TOP N to test
 # Number of top scoring RPN proposals to keep after applying NMS
 _C.MODEL.RPN.POST_NMS_TOP_N_TRAIN = 2000
 _C.MODEL.RPN.POST_NMS_TOP_N_TEST = 1000
 # NMS threshold used on RPN proposals
-_C.MODEL.RPN.NMS_THRESH = 0.7
+_C.MODEL.RPN.NMS_THRESH = 0.7  # NMS thresh
 # Proposal height and width both need to be greater than RPN_MIN_SIZE
 # (a the scale used during training or inference)
 _C.MODEL.RPN.MIN_SIZE = 0
@@ -160,7 +163,7 @@ _C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
 # E.g., a common configuration is: 512 * 2 * 8 = 8192
-_C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
+_C.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # 每一张图像具有的batch
 # Target fraction of RoI minibatch that is labeled foreground (i.e. class > 0)
 _C.MODEL.ROI_HEADS.POSITIVE_FRACTION = 0.25
 
@@ -236,19 +239,20 @@ _C.MODEL.RESNETS.STEM_OUT_CHANNELS = 64  # 主干输出通道
 # Solver
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CN()
-_C.SOLVER.MAX_ITER = 40000
+_C.SOLVER.MAX_ITER = 40000  # 最大求解器训练次数为40000
 
 _C.SOLVER.BASE_LR = 0.001
-_C.SOLVER.BIAS_LR_FACTOR = 2
+_C.SOLVER.BIAS_LR_FACTOR = 2  # for bias lr factor 2*lr
 
 _C.SOLVER.MOMENTUM = 0.9
 
-_C.SOLVER.WEIGHT_DECAY = 0.0005
-_C.SOLVER.WEIGHT_DECAY_BIAS = 0
+_C.SOLVER.WEIGHT_DECAY = 0.0005  # for not bias weight decay
+_C.SOLVER.WEIGHT_DECAY_BIAS = 0  # for bias weight decay
 
-_C.SOLVER.GAMMA = 0.1
-_C.SOLVER.STEPS = (30000,)
+_C.SOLVER.GAMMA = 0.1  # gamma is 0.1
+_C.SOLVER.STEPS = (30000,)  # solver steps when the step is over custom steps then using gamma to change the lr
 
+# for warmup learning rate
 _C.SOLVER.WARMUP_FACTOR = 1.0 / 3
 _C.SOLVER.WARMUP_ITERS = 500
 _C.SOLVER.WARMUP_METHOD = "linear"
@@ -277,4 +281,4 @@ _C.TEST.IMS_PER_BATCH = 8
 # ---------------------------------------------------------------------------- #
 _C.OUTPUT_DIR = "."
 
-_C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")
+_C.PATHS_CATALOG = os.path.join(os.path.dirname(__file__), "paths_catalog.py")  # paths_catalog.py路径和config在同目录下

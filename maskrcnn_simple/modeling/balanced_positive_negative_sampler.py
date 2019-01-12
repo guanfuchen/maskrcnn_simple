@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 
@@ -13,8 +14,8 @@ class BalancedPositiveNegativeSampler(object):
             batch_size_per_image (int): number of elements to be selected per image
             positive_fraction (float): percentace of positive elements per batch
         """
-        self.batch_size_per_image = batch_size_per_image
-        self.positive_fraction = positive_fraction
+        self.batch_size_per_image = batch_size_per_image  # 每一张图像的batch size
+        self.positive_fraction = positive_fraction  # 其中正样本所在的比例
 
     def __call__(self, matched_idxs):
         """
@@ -34,18 +35,24 @@ class BalancedPositiveNegativeSampler(object):
         """
         pos_idx = []
         neg_idx = []
+        # 对match的rpn进行排序然后根据positive_fraction以及batch_size_per_image填充pos和neg
         for matched_idxs_per_image in matched_idxs:
-            positive = torch.nonzero(matched_idxs_per_image >= 1).squeeze(1)
-            negative = torch.nonzero(matched_idxs_per_image == 0).squeeze(1)
+            positive = torch.nonzero(matched_idxs_per_image >= 1).squeeze(1)  # 输入pos的index
+            negative = torch.nonzero(matched_idxs_per_image == 0).squeeze(1)  # 输入neg的index
+            # print('positive:', positive)
+            # print('negative:', negative)
+            # print('len(positive):', len(positive))
+            # print('len(negative):', len(negative))
 
-            num_pos = int(self.batch_size_per_image * self.positive_fraction)
+            num_pos = int(self.batch_size_per_image * self.positive_fraction)  # pos的数目
             # protect against not enough positive examples
-            num_pos = min(positive.numel(), num_pos)
-            num_neg = self.batch_size_per_image - num_pos
+            num_pos = min(positive.numel(), num_pos)  # 取pos需要数目和pos总数的最小值
+            num_neg = self.batch_size_per_image - num_pos  # 设置neg为剩余的数目
             # protect against not enough negative examples
             num_neg = min(negative.numel(), num_neg)
 
             # randomly select positive and negative examples
+            # 随机选择正样本和负样本
             perm1 = torch.randperm(positive.numel(), device=positive.device)[:num_pos]
             perm2 = torch.randperm(negative.numel(), device=negative.device)[:num_neg]
 
@@ -53,12 +60,9 @@ class BalancedPositiveNegativeSampler(object):
             neg_idx_per_image = negative[perm2]
 
             # create binary mask from indices
-            pos_idx_per_image_mask = torch.zeros_like(
-                matched_idxs_per_image, dtype=torch.uint8
-            )
-            neg_idx_per_image_mask = torch.zeros_like(
-                matched_idxs_per_image, dtype=torch.uint8
-            )
+            # 将选择的neg和pos设置mask为1
+            pos_idx_per_image_mask = torch.zeros_like(matched_idxs_per_image, dtype=torch.uint8)
+            neg_idx_per_image_mask = torch.zeros_like(matched_idxs_per_image, dtype=torch.uint8)
             pos_idx_per_image_mask[pos_idx_per_image] = 1
             neg_idx_per_image_mask[neg_idx_per_image] = 1
 

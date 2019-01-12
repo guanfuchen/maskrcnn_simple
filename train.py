@@ -20,6 +20,7 @@ def train(cfg):
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
 
+    # 数据集加载
     data_loader = make_data_loader(
         cfg,
         is_train=True,
@@ -49,7 +50,6 @@ def main():
 
     cfg.merge_from_file(args.config_file)
     cfg.freeze()
-
 
     output_dir = cfg.OUTPUT_DIR
     if output_dir:

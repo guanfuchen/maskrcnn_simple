@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 
@@ -10,6 +11,7 @@ class RPNPostProcessor(torch.nn.Module):
     """
     Performs post-processing on the outputs of the RPN boxes, before feeding the
     proposals to the heads
+    对RPN boxes输出进行后处理，然后输入到ROIHead，具体过程先对boxes进行pre nms
     """
 
     def __init__(
@@ -19,7 +21,7 @@ class RPNPostProcessor(torch.nn.Module):
         nms_thresh,
         min_size,
         box_coder=None,
-        fpn_post_nms_top_n=None,
+        # fpn_post_nms_top_n=None,
     ):
         """
         Arguments:
@@ -28,7 +30,7 @@ class RPNPostProcessor(torch.nn.Module):
             nms_thresh (float)
             min_size (int)
             box_coder (BoxCoder)
-            fpn_post_nms_top_n (int)
+            # fpn_post_nms_top_n (int)
         """
         super(RPNPostProcessor, self).__init__()
         self.pre_nms_top_n = pre_nms_top_n
@@ -40,9 +42,9 @@ class RPNPostProcessor(torch.nn.Module):
             box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))
         self.box_coder = box_coder
 
-        if fpn_post_nms_top_n is None:
-            fpn_post_nms_top_n = post_nms_top_n
-        self.fpn_post_nms_top_n = fpn_post_nms_top_n
+        # if fpn_post_nms_top_n is None:
+        #     fpn_post_nms_top_n = post_nms_top_n
+        # self.fpn_post_nms_top_n = fpn_post_nms_top_n
 
     def add_gt_proposals(self, proposals, targets):
         """
@@ -85,8 +87,8 @@ class RPNPostProcessor(torch.nn.Module):
 
         num_anchors = A * H * W
 
-        pre_nms_top_n = min(self.pre_nms_top_n, num_anchors)
-        objectness, topk_idx = objectness.topk(pre_nms_top_n, dim=1, sorted=True)
+        pre_nms_top_n = min(self.pre_nms_top_n, num_anchors)  # 首先筛选pre_nms_top_n
+        objectness, topk_idx = objectness.topk(pre_nms_top_n, dim=1, sorted=True)  # 也就是通过objectness分数
 
         batch_idx = torch.arange(N, device=device)[:, None]
         box_regression = box_regression[batch_idx, topk_idx]
@@ -95,9 +97,7 @@ class RPNPostProcessor(torch.nn.Module):
         concat_anchors = torch.cat([a.bbox for a in anchors], dim=0)
         concat_anchors = concat_anchors.reshape(N, -1, 4)[batch_idx, topk_idx]
 
-        proposals = self.box_coder.decode(
-            box_regression.view(-1, 4), concat_anchors.view(-1, 4)
-        )
+        proposals = self.box_coder.decode(box_regression.view(-1, 4), concat_anchors.view(-1, 4))
 
         proposals = proposals.view(N, -1, 4)
 
@@ -131,7 +131,7 @@ class RPNPostProcessor(torch.nn.Module):
         num_levels = len(objectness)
         anchors = list(zip(*anchors))
         for a, o, b in zip(anchors, objectness, box_regression):
-            sampled_boxes.append(self.forward_for_single_feature_map(a, o, b))
+            sampled_boxes.append(self.forward_for_single_feature_map(a, o, b))  # 对objectness和box_regression进行
 
         boxlists = list(zip(*sampled_boxes))
         boxlists = [cat_boxlist(boxlist) for boxlist in boxlists]
@@ -157,7 +157,8 @@ class RPNPostProcessor(torch.nn.Module):
                 [boxlist.get_field("objectness") for boxlist in boxlists], dim=0
             )
             box_sizes = [len(boxlist) for boxlist in boxlists]
-            post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
+            # post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
+            post_nms_top_n = min(self.post_nms_top_n, len(objectness))
             _, inds_sorted = torch.topk(objectness, post_nms_top_n, dim=0, sorted=True)
             inds_mask = torch.zeros_like(objectness, dtype=torch.uint8)
             inds_mask[inds_sorted] = 1
@@ -167,7 +168,8 @@ class RPNPostProcessor(torch.nn.Module):
         else:
             for i in range(num_images):
                 objectness = boxlists[i].get_field("objectness")
-                post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
+                # post_nms_top_n = min(self.fpn_post_nms_top_n, len(objectness))
+                post_nms_top_n = min(self.post_nms_top_n, len(objectness))
                 _, inds_sorted = torch.topk(
                     objectness, post_nms_top_n, dim=0, sorted=True
                 )
@@ -176,23 +178,27 @@ class RPNPostProcessor(torch.nn.Module):
 
 
 def make_rpn_postprocessor(config, rpn_box_coder, is_train):
-    fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN
-    if not is_train:
-        fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST
+    # make rpn postprocessor
+    # fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TRAIN
+    # if not is_train:
+    #     fpn_post_nms_top_n = config.MODEL.RPN.FPN_POST_NMS_TOP_N_TEST
 
     pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TRAIN
     post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TRAIN
+    # 一般训练的pre nms和post nms会大一些
     if not is_train:
         pre_nms_top_n = config.MODEL.RPN.PRE_NMS_TOP_N_TEST
         post_nms_top_n = config.MODEL.RPN.POST_NMS_TOP_N_TEST
+    # pre or post nms to train or test
+
     nms_thresh = config.MODEL.RPN.NMS_THRESH
-    min_size = config.MODEL.RPN.MIN_SIZE
+    min_size = config.MODEL.RPN.MIN_SIZE  # RPN min size
     box_selector = RPNPostProcessor(
         pre_nms_top_n=pre_nms_top_n,
         post_nms_top_n=post_nms_top_n,
         nms_thresh=nms_thresh,
         min_size=min_size,
         box_coder=rpn_box_coder,
-        fpn_post_nms_top_n=fpn_post_nms_top_n,
+        # fpn_post_nms_top_n=fpn_post_nms_top_n,
     )
     return box_selector

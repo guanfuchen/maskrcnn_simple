@@ -1,5 +1,6 @@
 MODEL:
 #  DEVICE: "cpu"
+  RPN_ONLY: True
   META_ARCHITECTURE: "GeneralizedRCNN"
   WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
   RPN:

@@ -27,12 +27,15 @@ class RPNHead(nn.Module):
         )
 
         # cls_logits for class logits
+        # print('num_anchors:', num_anchors)
+        # print('in_channels:', in_channels)
+        # out whether the anchor is object
         self.cls_logits = nn.Conv2d(in_channels, num_anchors, kernel_size=1, stride=1)
-        self.bbox_pred = nn.Conv2d(
-            in_channels, num_anchors * 4, kernel_size=1, stride=1
-        )
+        self.bbox_pred = nn.Conv2d(in_channels, num_anchors * 4, kernel_size=1, stride=1)  # out the anchour bbox pre
 
         for l in [self.conv, self.cls_logits, self.bbox_pred]:
+            # conv和cls_logits和bbox_pred初始化方法
+            # 参考论文faster rcnn优化章节
             torch.nn.init.normal_(l.weight, std=0.01)
             torch.nn.init.constant_(l.bias, 0)
 
@@ -40,10 +43,12 @@ class RPNHead(nn.Module):
         # 输入特征图x
         logits = []
         bbox_reg = []
+        # print('len(x):', len(x))  # not FPN RPN, so feature for RPNHead calc is 1
         for feature in x:
-            t = F.relu(self.conv(feature))
+            t = F.relu(self.conv(feature))  # ReLU+Conv_3x3
             logits.append(self.cls_logits(t))
             bbox_reg.append(self.bbox_pred(t))
+        # logits and bbox_reg
         return logits, bbox_reg
 
 
@@ -67,16 +72,15 @@ class RPNModule(torch.nn.Module):
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
 
         # RPNHead
-        head = RPNHead(
-            cfg, in_channels, anchor_generator.num_anchors_per_location()[0]
-        )
+        head = RPNHead(cfg, in_channels, anchor_generator.num_anchors_per_location()[0])  # generates region proposal
 
         rpn_box_coder = BoxCoder(weights=(1.0, 1.0, 1.0, 1.0))  # rpn box coder with weights
 
+        # make rpn postprocessor is to select train box or test box
         box_selector_train = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=True)
         box_selector_test = make_rpn_postprocessor(cfg, rpn_box_coder, is_train=False)
 
-        loss_evaluator = make_rpn_loss_evaluator(cfg, rpn_box_coder)
+        loss_evaluator = make_rpn_loss_evaluator(cfg, rpn_box_coder)  # using rpn box coder for evaluate rpn loss
 
         self.anchor_generator = anchor_generator
         self.head = head
@@ -115,21 +119,18 @@ class RPNModule(torch.nn.Module):
             # predicted objectness and rpn_box_regression values and there is
             # no need to transform the anchors into predicted boxes; this is an
             # optimization that avoids the unnecessary transformation.
+            # 如果模型仅仅包含RPN，那么boxes为anchors，没必要转换boxes
             boxes = anchors
         else:
             # For end-to-end models, anchors must be transformed into boxes and
             # sampled into a training batch.
             # 端到端的训练，锚点必须转换为boxes
             with torch.no_grad():
-                # 选择train的box
-                boxes = self.box_selector_train(
-                    anchors, objectness, rpn_box_regression, targets
-                )
+                # 选择用来train ROIHead的box，根据targets和anchors
+                boxes = self.box_selector_train(anchors, objectness, rpn_box_regression, targets)
 
         # 根据anchors，objectness，rpn_box_regression和targets计算loss
-        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(
-            anchors, objectness, rpn_box_regression, targets
-        )
+        loss_objectness, loss_rpn_box_reg = self.loss_evaluator(anchors, objectness, rpn_box_regression, targets)
         losses = {
             "loss_objectness": loss_objectness,
             "loss_rpn_box_reg": loss_rpn_box_reg,

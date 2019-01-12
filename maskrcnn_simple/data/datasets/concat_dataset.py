@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import bisect
 
@@ -8,6 +9,7 @@ class ConcatDataset(_ConcatDataset):
     """
     Same as torch.utils.data.dataset.ConcatDataset, but exposes an extra
     method for querying the sizes of the image
+    将两个数据集concat为一个
     """
 
     def get_idxs(self, idx):

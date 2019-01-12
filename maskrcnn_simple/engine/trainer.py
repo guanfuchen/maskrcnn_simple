@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import datetime
 import logging
@@ -16,7 +17,8 @@ def reduce_loss_dict(loss_dict):
     0 has the averaged results. Returns a dict with the same fields as
     loss_dict, after reduction.
     """
-    world_size = get_world_size()
+    world_size = get_world_size()  # world size
+    # print('world_size:', world_size)
     if world_size < 2:
         return loss_dict
     with torch.no_grad():
@@ -45,19 +47,20 @@ def do_train(
     logger = logging.getLogger("maskrcnn_simple.trainer")
     logger.info("Start training")
     meters = MetricLogger(delimiter="  ")
-    max_iter = len(data_loader)
+    max_iter = len(data_loader)  # 数据loader最大迭代次数
     # start_iter = arguments["iteration"]
     start_iter = 0
-    model.train()
-    start_training_time = time.time()
+    model.train()  # 设置模型训练模式
+    start_training_time = time.time()  # 开始训练时间
     end = time.time()
+    # here data_loader is get SOLVER.MAX_ITER to break
     for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
         # print('iteration:{}'.format(iteration))
-        data_time = time.time() - end
+        data_time = time.time() - end  # data读取时间
         iteration = iteration + 1
         # arguments["iteration"] = iteration
 
-        scheduler.step()
+        scheduler.step()  # every iteration change the scheduler
 
         images = images.to(device)
         targets = [target.to(device) for target in targets]
@@ -75,14 +78,17 @@ def do_train(
         losses.backward()
         optimizer.step()
 
-        batch_time = time.time() - end
+        batch_time = time.time() - end  # batch time
         end = time.time()
-        meters.update(time=batch_time, data=data_time)
+        meters.update(time=batch_time, data=data_time)  # meters更新time
 
+        # eta_seconds剩余时间
         eta_seconds = meters.time.global_avg * (max_iter - iteration)
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
+        # 迭代次数20次同时iteration为max_iter时也就是one epoch
         if iteration % 20 == 0 or iteration == max_iter:
+
             logger.info(
                 meters.delimiter.join(
                     [
@@ -95,9 +101,9 @@ def do_train(
                 ).format(
                     eta=eta_string,
                     iter=iteration,
-                    meters=str(meters),
-                    lr=optimizer.param_groups[0]["lr"],
-                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,
+                    meters=str(meters),  # meters
+                    lr=optimizer.param_groups[0]["lr"],  # 优化器lr
+                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,  # cuda内存调用
                 )
             )
         # if iteration % checkpoint_period == 0:

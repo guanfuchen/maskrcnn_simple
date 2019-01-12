@@ -6,7 +6,8 @@ import torch
 
 
 class SmoothedValue(object):
-    """Track a series of values and provide access to smoothed values over a
+    """
+    Track a series of values and provide access to smoothed values over a
     window or the global series average.
     """
 
@@ -34,7 +35,7 @@ class SmoothedValue(object):
 
     @property
     def global_avg(self):
-        return self.total / self.count
+        return self.total / self.count  # total / count = avg
 
 
 class MetricLogger(object):

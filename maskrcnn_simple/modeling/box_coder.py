@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import math
 
@@ -8,6 +9,7 @@ class BoxCoder(object):
     """
     This class encodes and decodes a set of bounding boxes into
     the representation used for training the regressors.
+    用来训练regressors编码和解码bbox
     """
 
     def __init__(self, weights, bbox_xform_clip=math.log(1000. / 16)):

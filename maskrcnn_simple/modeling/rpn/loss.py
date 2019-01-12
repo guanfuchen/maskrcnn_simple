@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 """
 This file contains specific functions for computing losses on the RPN
@@ -32,8 +33,8 @@ class RPNLossComputation(object):
         self.box_coder = box_coder
 
     def match_targets_to_anchors(self, anchor, target):
-        match_quality_matrix = boxlist_iou(target, anchor)
-        matched_idxs = self.proposal_matcher(match_quality_matrix)
+        match_quality_matrix = boxlist_iou(target, anchor)  # 获取target和anchor的iou
+        matched_idxs = self.proposal_matcher(match_quality_matrix)  # 匹配相应的iou
         # RPN doesn't need any fields from target
         # for creating the labels, so clear them all
         target = target.copy_with_fields([])
@@ -49,24 +50,23 @@ class RPNLossComputation(object):
         labels = []
         regression_targets = []
         for anchors_per_image, targets_per_image in zip(anchors, targets):
-            matched_targets = self.match_targets_to_anchors(
-                anchors_per_image, targets_per_image
-            )
+            matched_targets = self.match_targets_to_anchors(anchors_per_image, targets_per_image)  # 将anchors根据target匹配
 
             matched_idxs = matched_targets.get_field("matched_idxs")
             labels_per_image = matched_idxs >= 0
             labels_per_image = labels_per_image.to(dtype=torch.float32)
+
             # discard anchors that go out of the boundaries of the image
+            # 去除图像边界外的锚点
             labels_per_image[~anchors_per_image.get_field("visibility")] = -1
 
             # discard indices that are between thresholds
+            # 去除阈值外的锚点
             inds_to_discard = matched_idxs == Matcher.BETWEEN_THRESHOLDS
             labels_per_image[inds_to_discard] = -1
 
             # compute regression targets
-            regression_targets_per_image = self.box_coder.encode(
-                matched_targets.bbox, anchors_per_image.bbox
-            )
+            regression_targets_per_image = self.box_coder.encode(matched_targets.bbox, anchors_per_image.bbox)
 
             labels.append(labels_per_image)
             regression_targets.append(regression_targets_per_image)
@@ -85,13 +85,14 @@ class RPNLossComputation(object):
             objectness_loss (Tensor)
             box_loss (Tensor
         """
-        anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]
-        labels, regression_targets = self.prepare_targets(anchors, targets)
-        sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)
+        anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]  # 将anchors box转化为boxlist
+        print('len(anchors):', len(anchors))
+        labels, regression_targets = self.prepare_targets(anchors, targets)  # 准备labels和回归的目标，也就是将anchor分为特定的labels
+        sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)  # 准备FG和BG的目录
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
         sampled_neg_inds = torch.nonzero(torch.cat(sampled_neg_inds, dim=0)).squeeze(1)
 
-        sampled_inds = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)
+        sampled_inds = torch.cat([sampled_pos_inds, sampled_neg_inds], dim=0)  # 获取采样的pos和neg列表
 
         objectness_flattened = []
         box_regression_flattened = []
@@ -99,13 +100,9 @@ class RPNLossComputation(object):
         # same format as the labels. Note that the labels are computed for
         # all feature levels concatenated, so we keep the same representation
         # for the objectness and the box_regression
-        for objectness_per_level, box_regression_per_level in zip(
-            objectness, box_regression
-        ):
+        for objectness_per_level, box_regression_per_level in zip(objectness, box_regression):
             N, A, H, W = objectness_per_level.shape
-            objectness_per_level = objectness_per_level.permute(0, 2, 3, 1).reshape(
-                N, -1
-            )
+            objectness_per_level = objectness_per_level.permute(0, 2, 3, 1).reshape(N, -1)
             box_regression_per_level = box_regression_per_level.view(N, -1, 4, H, W)
             box_regression_per_level = box_regression_per_level.permute(0, 3, 4, 1, 2)
             box_regression_per_level = box_regression_per_level.reshape(N, -1, 4)
@@ -120,6 +117,7 @@ class RPNLossComputation(object):
         labels = torch.cat(labels, dim=0)
         regression_targets = torch.cat(regression_targets, dim=0)
 
+        # box loss计算对pos的box repression和regression targets
         box_loss = smooth_l1_loss(
             box_regression[sampled_pos_inds],
             regression_targets[sampled_pos_inds],
@@ -135,15 +133,23 @@ class RPNLossComputation(object):
 
 
 def make_rpn_loss_evaluator(cfg, box_coder):
+    """
+    calc rpn loss
+    :param cfg:
+    :param box_coder:
+    :return:
+    """
+    # Matcher is for anchor matcher with gt, for example pos rpn and neg rpn
+    # Here is the pos and neg rpn matcher using FG_IOU_THRESHOLD and BG_IOU_THRESHOLD
     matcher = Matcher(
         cfg.MODEL.RPN.FG_IOU_THRESHOLD,
         cfg.MODEL.RPN.BG_IOU_THRESHOLD,
         allow_low_quality_matches=True,
     )
 
-    fg_bg_sampler = BalancedPositiveNegativeSampler(
-        cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION
-    )
+    # FG and BG Sampler for 256 total FG+BG and 128 for FG and 128 for BG, if num(FG) < 128 using BG
+    fg_bg_sampler = BalancedPositiveNegativeSampler(cfg.MODEL.RPN.BATCH_SIZE_PER_IMAGE, cfg.MODEL.RPN.POSITIVE_FRACTION)
 
+    # using box coder and fg_bg_sampler and matcher to computate the loss
     loss_evaluator = RPNLossComputation(matcher, fg_bg_sampler, box_coder)
     return loss_evaluator

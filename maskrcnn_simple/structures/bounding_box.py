@@ -217,14 +217,18 @@ class BoxList(object):
         return self.bbox.shape[0]
 
     def clip_to_image(self, remove_empty=True):
+        # clip image to size, bbox should be in [0, height-1] and [0, width-1]
         TO_REMOVE = 1
         self.bbox[:, 0].clamp_(min=0, max=self.size[0] - TO_REMOVE)
         self.bbox[:, 1].clamp_(min=0, max=self.size[1] - TO_REMOVE)
         self.bbox[:, 2].clamp_(min=0, max=self.size[0] - TO_REMOVE)
         self.bbox[:, 3].clamp_(min=0, max=self.size[1] - TO_REMOVE)
+
+        # 是否去除empty，也就是那些那些
         if remove_empty:
             box = self.bbox
             keep = (box[:, 3] > box[:, 1]) & (box[:, 2] > box[:, 0])
+            # print('keep:', self[keep])
             return self[keep]
         return self
 

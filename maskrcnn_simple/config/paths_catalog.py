@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 """Centralized catalog of paths."""
 
@@ -103,6 +104,7 @@ class DatasetCatalog(object):
             attrs = DatasetCatalog.DATASETS[name]
             # voc use data_dir and split
             args = dict(
+                # 已经将data_dir加入进去，比如data_dir+attrs["data_dir"]为datasets/voc/VOC2007
                 data_dir=os.path.join(data_dir, attrs["data_dir"]),
                 split=attrs["split"],
             )

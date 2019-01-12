@@ -40,21 +40,26 @@ class GeneralizedRCNN(nn.Module):
         # training mode targets is bounding box
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
-        images = to_image_list(images)
+        images = to_image_list(images)  # 将图像转换为list
         # print('images.tensors.shape:', images.tensors.shape)
+        # print('targets:', targets)
         features = self.backbone(images.tensors)  # backbone forward the images
+
         proposals, proposal_losses = self.rpn(images, features, targets)  # rpn区域建议网络，训练包括建议框和损失
+
         if self.roi_heads:
+            # 如果存在roi_heads
             x, result, detector_losses = self.roi_heads(features, proposals, targets)  # 区域建议和特征以及targets，训练包括
         else:
             # RPN-only models don't have roi_heads
-            x = features
+            # x = features
             result = proposals
             detector_losses = {}
 
         # training mode return losses
         if self.training:
             losses = {}
+            # 训练过程返回losses包括ROI head loss和RPN loss
             losses.update(detector_losses)
             losses.update(proposal_losses)
             return losses
