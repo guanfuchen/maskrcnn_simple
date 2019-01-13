@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import random
+import time
 
 from PIL import Image
 import torch
@@ -32,6 +33,8 @@ class WiderFaceLoader(data.Dataset):
         :param transform:
         :param boxcoder:
         """
+        data_init_time = time.time()
+        print('WiderFaceLoader----in----')
         self.root = data_dir
         self.image_set = split
         self.keep_difficult = use_difficult
@@ -40,6 +43,7 @@ class WiderFaceLoader(data.Dataset):
         self.boxes_all = []
         self.difficult_boxes_all = []
         self.labels_all = []
+        self.im_info_all = []
         self.files = []
         # self.targets = []
         self.bbox_fname = None
@@ -78,12 +82,20 @@ class WiderFaceLoader(data.Dataset):
                 continue
             else:
                 pass
-                # # 造成加载文件较慢
-                # img = cv2.imread(image_name)
-                # if img is None:
-                #     continue
+                # height = 1024.0
+                # width = 1024.0
+                # # # 造成加载文件较慢
+                img = cv2.imread(image_name)
+                # print('img.shape:', img.shape)
+                height, width, _ = img.shape
+                im_info = {'height': height, 'width': width}
+                if img is None:
+                    continue
 
             face_num = int(bbox_lines[bbox_lines_id+1].strip())  # 图片中有多少人脸
+            if face_num == 0:
+                print('{} no face'.format(image_name))
+                continue
 
             for face_id in range(face_num):
                 bbox_line = bbox_lines[bbox_lines_id+2+face_id].strip()
@@ -92,16 +104,27 @@ class WiderFaceLoader(data.Dataset):
                 y = float(bbox_line_split[1])
                 w = float(bbox_line_split[2])
                 h = float(bbox_line_split[3])
+                if w/width<10.0/1024.0 or h/height<10.0/1024.0:
+                    # print('!!!tiny face!!! w:{}, h:{}'.format(w, h))
+                    continue
                 boxes.append([x, y, x+w, y+h])
                 labels.append(1)
                 difficult_boxes.append(0)
+
+            if len(boxes) == 0:
+                continue
+
             self.boxes_all.append(boxes)
             self.labels_all.append(labels)
             self.difficult_boxes_all.append(difficult_boxes)
+            self.im_info_all.append(im_info)
 
             self.files.append(image_name)
         # print('self.boxes:', self.boxes)
         # print('len(self.boxes):', len(self.boxes))
+        print('WiderFaceLoader----out----')
+        data_end_time = time.time()
+        print('cost time', data_end_time-data_init_time)
 
     def __getitem__(self, index):
         img_path = self.files[index]
@@ -145,8 +168,9 @@ class WiderFaceLoader(data.Dataset):
         # img_path = self.files[index]
         # img = Image.open(img_path).convert('RGB')
         # !!!获取图像真实宽高!!!
-        width, height = (1024, 1024)
-        return {"height": height, "width": width}
+        # width, height = (1024, 1024)
+        im_info = self.im_info_all[index]
+        return im_info
 
     def map_class_id_to_class_name(self, class_id):
         return WiderFaceLoader.CLASSES[class_id]

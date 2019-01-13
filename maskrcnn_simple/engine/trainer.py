@@ -6,6 +6,7 @@ import time
 
 import torch
 import torch.distributed as dist
+from maskrcnn_simple.utils.visdom_warpper import viz
 
 from maskrcnn_simple.utils.comm import get_world_size
 from maskrcnn_simple.utils.metric_logger import MetricLogger
@@ -106,6 +107,14 @@ def do_train(
                     memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0,  # cuda内存调用
                 )
             )
+            loss_global_avg = meters.__getattr__('loss').global_avg
+            viz.line(X=iteration, Y=loss_global_avg, win='loss_iterations', opts=dict(title='loss_iterations', xlabel='iterations', ylabel='loss'))
+
+            loss_rpn_box_reg_global_avg = meters.__getattr__('loss_rpn_box_reg').global_avg
+            viz.line(X=iteration, Y=loss_rpn_box_reg_global_avg, win='loss_rpn_box_reg_iterations', opts=dict(title='loss_rpn_box_reg_iterations', xlabel='iterations', ylabel='loss_rpn_box_reg'))
+
+            loss_objectness_global_avg = meters.__getattr__('loss_objectness').global_avg
+            viz.line(X=iteration, Y=loss_objectness_global_avg, win='loss_objectness_iterations', opts=dict(title='loss_objectness_iterations', xlabel='iterations', ylabel='loss_objectness'))
         # if iteration % checkpoint_period == 0:
         #     checkpointer.save("model_{:07d}".format(iteration), **arguments)
         # if iteration == max_iter:
