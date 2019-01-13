@@ -30,6 +30,10 @@ class DatasetCatalog(object):
             "data_dir": "voc/VOC2007",
             "split": "train"
         },
+        "wider_train": {
+            "data_dir": "wider",
+            "split": "train"
+        },
         "voc_2007_train_cocostyle": {
             "img_dir": "voc/VOC2007/JPEGImages",
             "ann_file": "voc/VOC2007/Annotations/pascal_train2007.json"
@@ -38,12 +42,20 @@ class DatasetCatalog(object):
             "data_dir": "voc/VOC2007",
             "split": "val"
         },
+        # "wider_val": {
+        #     "data_dir": "wider",
+        #     "split": "val"
+        # },
         "voc_2007_val_cocostyle": {
             "img_dir": "voc/VOC2007/JPEGImages",
             "ann_file": "voc/VOC2007/Annotations/pascal_val2007.json"
         },
         "voc_2007_test": {
             "data_dir": "voc/VOC2007",
+            "split": "test"
+        },
+        "wider_test": {
+            "data_dir": "wider",
             "split": "test"
         },
         "voc_2007_test_cocostyle": {
@@ -110,6 +122,19 @@ class DatasetCatalog(object):
             )
             return dict(
                 factory="PascalVOCDataset",
+                args=args,
+            )
+        elif "wider" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            # voc use data_dir and split
+            args = dict(
+                # 已经将data_dir加入进去，比如data_dir+attrs["data_dir"]为datasets/voc/VOC2007
+                data_dir=os.path.join(data_dir, attrs["data_dir"]),
+                split=attrs["split"],
+            )
+            return dict(
+                factory="WiderFaceLoader",
                 args=args,
             )
         raise RuntimeError("Dataset not available: {}".format(name))

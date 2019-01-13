@@ -94,6 +94,11 @@ class PascalVOCDataset(torch.utils.data.Dataset):
         anno = self._preprocess_annotation(anno)
 
         height, width = anno["im_info"]  # 标注中图像的宽高信息，boxes信息，并转换为BoxList格式
+        print('anno["boxes"]:', anno["boxes"])
+        print('height:', height)
+        print('width:', width)
+        print('anno["labels"]:', anno["labels"])
+        print('anno["difficult"]:', anno["difficult"])
         target = BoxList(anno["boxes"], (width, height), mode="xyxy")
         target.add_field("labels", anno["labels"])  # 增加labels
         target.add_field("difficult", anno["difficult"])  # 增加是否difficult
@@ -167,10 +172,10 @@ def main():
             cv2.rectangle(images_np, pt1=(int(bbox[0]), int(bbox[1])), pt2=(int(bbox[2]), int(bbox[3])), color=(255, 0, 0))
         # print('images:', images)
         # print('targets:', targets)
-        plt.imshow(images_np)
-        if iteration == 3:
+        # plt.imshow(images_np)
+        if iteration == 0:
             break
-    plt.show()
+    # plt.show()
 
 
 if __name__ == '__main__':

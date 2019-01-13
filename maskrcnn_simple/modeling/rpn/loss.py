@@ -86,7 +86,7 @@ class RPNLossComputation(object):
             box_loss (Tensor
         """
         anchors = [cat_boxlist(anchors_per_image) for anchors_per_image in anchors]  # 将anchors box转化为boxlist
-        print('len(anchors):', len(anchors))
+        # print('len(anchors):', len(anchors))
         labels, regression_targets = self.prepare_targets(anchors, targets)  # 准备labels和回归的目标，也就是将anchor分为特定的labels
         sampled_pos_inds, sampled_neg_inds = self.fg_bg_sampler(labels)  # 准备FG和BG的目录
         sampled_pos_inds = torch.nonzero(torch.cat(sampled_pos_inds, dim=0)).squeeze(1)
