@@ -1,0 +1,26 @@
+MODEL:
+#  DEVICE: "cpu"
+  RPN_ONLY: True
+  META_ARCHITECTURE: "GeneralizedRCNN"
+  WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
+  RPN:
+    PRE_NMS_TOP_N_TEST: 6000
+    POST_NMS_TOP_N_TEST: 300
+    ANCHOR_SIZES: (128, 256, 512)
+    ASPECT_RATIOS: (1.0,)
+  ROI_HEADS:
+    BATCH_SIZE_PER_IMAGE: 512
+  ROI_BOX_HEAD:
+    NUM_CLASSES: 2
+DATASETS:
+  TRAIN: ("caltech_pedestrian_train",)
+  TEST: ("caltech_pedestrian_test",)
+SOLVER:
+  BASE_LR: 0.001
+#  BASE_LR: 0.00001
+  WEIGHT_DECAY: 0.0001
+  STEPS: (50000, )
+  MAX_ITER: 70000
+  IMS_PER_BATCH: 1
+TEST:
+  IMS_PER_BATCH: 1
